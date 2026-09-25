@@ -1,0 +1,27 @@
+services:
+  financial-bi:
+    build: .
+    container_name: financial-bi
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mounts the whole directory (not just the file) so the telegram-bot's
+      # atomic write-tmp-then-rename doesn't leave this container with a
+      # dangling/orphaned single-file bind mount (ENOENT after a bot write).
+      - ./data:/app/data:ro
+    restart: unless-stopped
+
+  telegram-bot:
+    build: ./bot
+    container_name: financial-bi-telegram-bot
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      # Mounts the whole directory (read-write) so the bot's atomic
+      # write-tmp-then-rename doesn't break a single-file bind mount.
+      - ./data:/app/data
+      - ./bot/state:/app/state
+    restart: unless-stopped

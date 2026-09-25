@@ -1,0 +1,195 @@
+{
+  "_metadata": {
+    "versao": "1.7",
+    "fonte": "Projeto Financial Control - Template de Exemplo",
+    "ultima_atualizacao": "2026-09-25",
+    "mes_referencia": "2026-09",
+    "responsavel": "Sistema Financeiro Exemplo",
+    "regra_schema": "Estrutura fixa - ver GEMINI.md na raiz do projeto. E permitido ADICIONAR campos novos. NUNCA remover, renomear ou mudar o tipo/formato de um campo existente."
+  },
+  "pessoas": {
+    "TITULAR": {
+      "nome": "Usuário Exemplo",
+      "funcao": "Desenvolvedor Backend",
+      "empresa": "Empresa Tech",
+      "admissao": "2022-01-15"
+    },
+    "CONJUGE": {
+      "nome": "Cônjuge Exemplo",
+      "funcao": "Designer",
+      "empresa": "Studio Criativo",
+      "admissao": "2023-03-10"
+    }
+  },
+  "entradas": {
+    "recebido": [
+      {
+        "item": "Salário Titular",
+        "valor": 6000
+      },
+      {
+        "item": "Benefícios / VA",
+        "valor": 800
+      },
+      {
+        "item": "Salário Cônjuge",
+        "valor": 4500
+      }
+    ],
+    "pendente": [
+      {
+        "item": "Freelance Projeto A",
+        "valor": 1500
+      }
+    ],
+    "total_recebido": 11300,
+    "total_pendente": 1500,
+    "total_esperado": 12800
+  },
+  "despesas": {
+    "categorias": [
+      {
+        "nome": "Moradia e Serviços",
+        "itens": [
+          { "item": "Aluguel / Condomínio", "previsto": 2000, "pago": 2000 },
+          { "item": "Energia Elétrica", "previsto": 300, "pago": 280 },
+          { "item": "Água / Saneamento", "previsto": 100, "pago": 90 },
+          { "item": "Internet Fibra", "previsto": 150, "pago": 150 }
+        ]
+      },
+      {
+        "nome": "Alimentação e Mercado",
+        "itens": [
+          { "item": "Supermercado Mensal", "previsto": 1800, "pago": 1400 },
+          { "item": "Feira / Padaria", "previsto": 300, "pago": 250 }
+        ]
+      },
+      {
+        "nome": "Transporte e Lazer",
+        "itens": [
+          { "item": "Combustível", "previsto": 400, "pago": 350 },
+          { "item": "Streaming e Assinaturas", "previsto": 120, "pago": 120 }
+        ]
+      }
+    ],
+    "compras_parceladas": [
+      {
+        "item": "Notebook Trabalho",
+        "total": 3600,
+        "pago_mes": 300,
+        "parcela": "06/12",
+        "parcela_atual": 6,
+        "parcelas_totais": 12
+      }
+    ],
+    "resumo": {
+      "previsto_total": 5070,
+      "pago_total": 4590
+    }
+  },
+  "dividas": {
+    "ativas": [
+      {
+        "credor": "Financiamento Imobiliário",
+        "valor": 850,
+        "data_final": "2030-12"
+      }
+    ],
+    "atrasadas": [],
+    "total_ativas": 850,
+    "total_atrasadas": 0
+  },
+  "patrimonio": {
+    "itens": [
+      {
+        "item": "Reserva de Emergência (CDB)",
+        "valor": 15000,
+        "adicao_mensal": 500
+      },
+      {
+        "item": "Previdência Privada / VGBL",
+        "valor": 12000,
+        "adicao_mensal": 300
+      }
+    ],
+    "total": 27000
+  },
+  "saldo_caixa": {
+    "recebido": 11300,
+    "pago": 4590,
+    "caixa_atual": 6710,
+    "ainda_precisa_pagar": 480
+  },
+  "holerites": {
+    "TITULAR": [
+      {
+        "competencia": "2026-08",
+        "status": "Fechado",
+        "bruto": 8000,
+        "total_proventos": 8000,
+        "total_descontos": 2000,
+        "liquido": 6000,
+        "descontos": [
+          { "descricao": "INSS", "valor": 900 },
+          { "descricao": "IRRF", "valor": 1100 }
+        ]
+      }
+    ]
+  },
+  "beneficios_mensais": {
+    "TITULAR": {
+      "VR": 800
+    }
+  },
+  "renda_fixa_mensal": [
+    {
+      "pessoa": "TITULAR",
+      "liquido": 6000,
+      "beneficios": 800,
+      "total": 6800
+    },
+    {
+      "pessoa": "CONJUGE",
+      "liquido": 4500,
+      "beneficios": 0,
+      "total": 4500
+    }
+  ],
+  "cartoes_credito": {
+    "Cartão Principal": {
+      "banco": "Banco Exemplo",
+      "status": "Em dia",
+      "faturas": [
+        {
+          "mes": "2026-09",
+          "valor": 1200,
+          "pago": true,
+          "valor_pago": 1200,
+          "itens": [
+            { "descricao": "Farmácia", "valor": 150 },
+            { "descricao": "Restaurante", "valor": 200 }
+          ]
+        },
+        {
+          "mes": "2026-10",
+          "valor": 850,
+          "pago": false
+        }
+      ],
+      "cronograma_estimado": [
+        { "mes": "2026-11", "valor_estimado": 600 }
+      ]
+    }
+  },
+  "freelances_historico": [
+    {
+      "cliente": "Cliente Exemplo A",
+      "status": "Em andamento",
+      "recebimentos": [
+        { "mes": "2026-08", "valor": 1500, "status": "confirmado" },
+        { "mes": "2026-09", "valor": 1500, "status": "pendente" }
+      ]
+    }
+  ],
+  "historico_mensal": {}
+}

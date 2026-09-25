@@ -1,0 +1,10 @@
+{
+  "name": "financial-bi-telegram-bot",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
+    "@google/genai": "^2.24.0",
+    "tesseract.js": "^7.0.0"
+  }
+}
