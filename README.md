@@ -1,5 +1,8 @@
 # Financeiro Familia Arcanjo — BI local
 
+> 🌐 **URL de Acesso ao Painel**: [http://localhost:3000](http://localhost:3000)  
+> 🐳 **Container Docker**: `financial-bi` (Porta `3000:3000`)
+
 Painel de BI local (roda no navegador) para visualizar os dados financeiros da
 familia, a partir do JSON master integrado com Google Gemini & Antigravity.
 
@@ -18,6 +21,11 @@ financial-bi/
   docker-compose.yml
 ```
 
+## Acesso Rápido
+
+- **Painel Web**: [http://localhost:3000](http://localhost:3000)
+- **Status do Container**: `docker ps --filter "name=financial-bi"`
+
 ## Rodando localmente (sem Docker)
 
 ```bash
@@ -25,17 +33,24 @@ npm install
 npm run dev
 ```
 
-Acesse http://localhost:3000
+Acesse [http://localhost:3000](http://localhost:3000).
 
 ## Rodando com Docker
 
+Para iniciar o container do BI em segundo plano:
+
 ```bash
-docker compose up --build
+docker compose up -d financial-bi
 ```
 
-Acesse http://localhost:3000. O `docker-compose.yml` monta `data/master.json`
-como volume: depois de editar o arquivo, basta `docker compose restart`
-(nao precisa rebuildar a imagem).
+Ou para subir o ambiente completo (BI + Bot Telegram):
+
+```bash
+docker compose up -d --build
+```
+
+- **Acesso**: [http://localhost:3000](http://localhost:3000)
+- O `docker-compose.yml` monta a pasta `./data` como volume (`:ro`): depois de editar `data/master.json`, as alterações são lidas automaticamente ou você pode rodar `docker compose restart financial-bi` (não precisa rebuildar a imagem).
 
 ## Atualizando os dados
 

@@ -18,8 +18,14 @@ function fromMonthIndex(idx: number): string {
  * planned/previsto for the month), never from what has already been paid.
  */
 export function custosFixosMensais(data: MasterData): number {
+  const refIdx = toMonthIndex(data._metadata.mes_referencia);
   return data.despesas.categorias
     .flatMap((c) => c.itens)
+    .filter((item) => {
+      if (item.data_inicio && toMonthIndex(item.data_inicio) > refIdx) return false;
+      if (item.data_fim && toMonthIndex(item.data_fim) < refIdx) return false;
+      return true;
+    })
     .reduce((sum, item) => sum + item.previsto, 0);
 }
 
@@ -35,14 +41,21 @@ export interface CustoFixoCategoria {
  * ou emprestimos. Usado para mostrar o custo fixo puro de manter a casa.
  */
 export function custosFixosPorCategoria(data: MasterData): CustoFixoCategoria[] {
+  const refIdx = toMonthIndex(data._metadata.mes_referencia);
   return data.despesas.categorias
-    .map((cat) => ({
-      nome: cat.nome,
-      // Itens com previsto 0 sao gasto extra/variavel, sem expectativa fixa -
-      // nao entram na lista de custo fixo (mas continuam contando no "pago" real).
-      itens: cat.itens.filter((item) => item.previsto > 0).map((item) => ({ item: item.item, previsto: item.previsto })),
-      subtotal: cat.itens.reduce((sum, item) => sum + item.previsto, 0),
-    }))
+    .map((cat) => {
+      const itensValidos = cat.itens.filter((item) => {
+        if (item.previsto <= 0) return false;
+        if (item.data_inicio && toMonthIndex(item.data_inicio) > refIdx) return false;
+        if (item.data_fim && toMonthIndex(item.data_fim) < refIdx) return false;
+        return true;
+      });
+      return {
+        nome: cat.nome,
+        itens: itensValidos.map((item) => ({ item: item.item, previsto: item.previsto })),
+        subtotal: itensValidos.reduce((sum, item) => sum + item.previsto, 0),
+      };
+    })
     .filter((cat) => cat.itens.length > 0);
 }
 

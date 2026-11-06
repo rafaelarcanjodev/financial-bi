@@ -48,6 +48,16 @@ export interface MonthView {
   comprasParceladas: CompraParceladaProjetada[];
   totalDividasAtivas: number;
   totalComprasParceladas: number;
+
+  /** Projeção analítica do mês (aplicável para meses vigentes e futuros) */
+  totalCartoesMes: number;
+  totalDespesasFixasPrevistas: number;
+  totalSaidasPrevistas: number;
+  entradasProjetadas: {
+    total_esperado: number;
+    itens: { item: string; valor: number; tipo: string }[];
+  };
+  resultadoPrevisto: number;
 }
 
 /**
@@ -68,11 +78,19 @@ export function mesesDisponiveis(data: MasterData): string[] {
 
   for (const d of data.dividas.ativas) {
     if (d.data_final) maxIdx = Math.max(maxIdx, toMonthIndex(d.data_final));
-    if (d.data_inicio) maxIdx = Math.max(maxIdx, toMonthIndex(d.data_inicio));
+    if (d.data_inicio) {
+      maxIdx = Math.max(maxIdx, toMonthIndex(d.data_inicio));
+      minIdx = Math.min(minIdx, toMonthIndex(d.data_inicio));
+    }
   }
 
   for (const c of data.despesas.compras_parceladas) {
-    if (c.parcela_atual !== undefined && c.parcelas_totais !== undefined) {
+    const startMes = c.mes_inicio || c.data_inicio;
+    if (startMes && c.parcelas_totais) {
+      const startIdx = toMonthIndex(startMes);
+      minIdx = Math.min(minIdx, startIdx);
+      maxIdx = Math.max(maxIdx, startIdx + c.parcelas_totais - 1);
+    } else if (c.parcela_atual !== undefined && c.parcelas_totais !== undefined) {
       const restantes = c.parcelas_totais - c.parcela_atual;
       maxIdx = Math.max(maxIdx, refIdx + restantes);
       minIdx = Math.min(minIdx, refIdx - (c.parcela_atual - 1));
@@ -87,6 +105,14 @@ export function mesesDisponiveis(data: MasterData): string[] {
     }
     for (const c of cartao.cronograma_estimado ?? []) {
       maxIdx = Math.max(maxIdx, toMonthIndex(c.mes));
+    }
+  }
+
+  for (const cat of data.despesas.categorias) {
+    for (const item of cat.itens) {
+      if (item.data_inicio) {
+        maxIdx = Math.max(maxIdx, toMonthIndex(item.data_inicio));
+      }
     }
   }
 
@@ -116,7 +142,20 @@ export function getMonthView(data: MasterData, mes: string): MonthView {
       }
       continue;
     }
-    const parcelaProjetada = c.parcela_atual + offset;
+
+    const startMes = c.mes_inicio || c.data_inicio;
+    let parcelaProjetada: number;
+    if (startMes) {
+      const startIdx = toMonthIndex(startMes);
+      if (idx < startIdx) {
+        // Compra com início futuro que ainda não começou neste mês
+        continue;
+      }
+      parcelaProjetada = idx - startIdx + 1;
+    } else {
+      parcelaProjetada = c.parcela_atual + offset;
+    }
+
     if (parcelaProjetada >= 1 && parcelaProjetada <= c.parcelas_totais) {
       comprasParceladas.push({
         ...c,
@@ -130,11 +169,139 @@ export function getMonthView(data: MasterData, mes: string): MonthView {
   const despesasReal = isVigente ? data.despesas : historico?.despesas;
   const despesasComPago = !!despesasReal;
   const despesasCategorias: DespesaCategoria[] =
-    despesasReal?.categorias ??
-    data.despesas.categorias.map((cat) => ({
-      nome: cat.nome,
-      itens: cat.itens.map((item) => ({ item: item.item, previsto: item.previsto, pago: 0 })),
-    }));
+    despesasReal
+      ? despesasReal.categorias.map((cat) => ({
+          nome: cat.nome,
+          itens: cat.itens.filter((item) => {
+            if (item.data_inicio && toMonthIndex(item.data_inicio) > idx) return false;
+            if (item.data_fim && toMonthIndex(item.data_fim) < idx) return false;
+            return true;
+          }),
+        }))
+      : data.despesas.categorias.map((cat) => ({
+          nome: cat.nome,
+          itens: cat.itens
+            .filter((item) => {
+              if (item.data_inicio && toMonthIndex(item.data_inicio) > idx) return false;
+              if (item.data_fim && toMonthIndex(item.data_fim) < idx) return false;
+              return true;
+            })
+            .map((item) => ({
+              item: item.item,
+              previsto: item.previsto,
+              pago: 0,
+              detalhes: item.detalhes,
+              data_inicio: item.data_inicio,
+              data_fim: item.data_fim,
+            })),
+        }));
+
+  const totalDividasAtivas = dividasAtivas.reduce((s, d) => s + d.valor, 0);
+  const totalComprasParceladas = comprasParceladas.reduce(
+    (s, c) => s + (c.parcelas_totais > 0 ? c.total / c.parcelas_totais : c.pago_mes),
+    0
+  );
+  const totalDespesasFixasPrevistas = despesasCategorias.reduce(
+    (s, cat) => s + cat.itens.reduce((si, i) => si + i.previsto, 0),
+    0
+  );
+
+  // Faturas ou cronograma estimado dos cartões no mês
+  let totalCartoesMes = 0;
+  for (const cartao of Object.values(data.cartoes_credito)) {
+    const entry = getCardMonthEntry(cartao, mes);
+    if (entry && entry.tipo !== "quitado") {
+      totalCartoesMes += entry.valor;
+    }
+  }
+
+  // Projeção inteligente de entradas para o mês
+  let entradasProjetadas: MonthView["entradasProjetadas"];
+  if (isVigente) {
+    entradasProjetadas = {
+      total_esperado: data.entradas.total_esperado,
+      itens: [
+        ...data.entradas.recebido.map((r) => ({ item: r.item, valor: r.valor, tipo: "recebido" })),
+        ...data.entradas.pendente.map((p) => ({ item: p.item, valor: p.valor, tipo: "pendente" })),
+      ],
+    };
+  } else if (historico?.entradas) {
+    entradasProjetadas = {
+      total_esperado: historico.entradas.total_esperado,
+      itens: [
+        ...historico.entradas.recebido.map((r) => ({ item: r.item, valor: r.valor, tipo: "recebido" })),
+        ...historico.entradas.pendente.map((p) => ({ item: p.item, valor: p.valor, tipo: "pendente" })),
+      ],
+    };
+  } else {
+    // Projeção futura com base na renda fixa recorrente da família
+    const rendaRafael = data.renda_fixa_mensal?.find((r) => r.pessoa.toUpperCase().includes("RAFAEL"));
+    const rendaNatasha = data.renda_fixa_mensal?.find((r) => r.pessoa.toUpperCase().includes("NATASHA"));
+    const itensFuturos = [
+      { item: "Salário Natasha (Líquido)", valor: rendaNatasha?.liquido ?? 5244.31, tipo: "previsto" },
+      { item: "VR Natasha", valor: data.beneficios_mensais.NATASHA?.VR ?? 722.1, tipo: "previsto" },
+      { item: "Salário Rafael (Líquido)", valor: rendaRafael?.liquido ?? 2860.7, tipo: "previsto" },
+      { item: "VR Rafael (Líquido)", valor: data.beneficios_mensais.RAFAEL?.VR ?? 646.1, tipo: "previsto" },
+      { item: "VHO Rafael", valor: data.beneficios_mensais.RAFAEL?.VHO ?? 133, tipo: "previsto" },
+    ];
+
+    // Inclui contrato contínuo do Caminho Louvor
+    itensFuturos.push({ item: "Freelance Caminho do Louvor", valor: 850.0, tipo: "previsto" });
+
+    // Inclui freelances cadastrados com previsão para este mês específico a partir de freelances_historico
+    for (const f of data.freelances_historico ?? []) {
+      for (const rec of f.recebimentos ?? []) {
+        if (rec.mes.startsWith(mes)) {
+          // Evita duplicar se já foi adicionado
+          const desc = `Freelance ${f.cliente}`;
+          if (!itensFuturos.some((it) => it.item.toLowerCase().includes(f.cliente.toLowerCase()))) {
+            itensFuturos.push({
+              item: desc,
+              valor: rec.valor,
+              tipo: "previsto",
+            });
+          }
+        }
+      }
+    }
+
+    // Entradas extras sazonais confirmadas
+    if (mes === "2026-11") {
+      itensFuturos.push({ item: "13º Salário Natasha (20/nov)", valor: 3500.0, tipo: "previsto" });
+      itensFuturos.push({ item: "13º Salário Rafael (30/nov)", valor: 3000.0, tipo: "previsto" });
+    } else if (mes === "2026-12") {
+      itensFuturos.push({ item: "Bônus de Férias (28/dez)", valor: 500.0, tipo: "previsto" });
+    }
+
+    const totalEsperado = itensFuturos.reduce((s, i) => s + i.valor, 0);
+    entradasProjetadas = {
+      total_esperado: Math.round(totalEsperado * 100) / 100,
+      itens: itensFuturos,
+    };
+  }
+
+  const totalSaidasPrevistas = Math.round(
+    (totalDespesasFixasPrevistas + totalDividasAtivas + totalComprasParceladas + totalCartoesMes) * 100
+  ) / 100;
+  const resultadoPrevisto = Math.round((entradasProjetadas.total_esperado - totalSaidasPrevistas) * 100) / 100;
+
+  // Patrimônio projetado acumulado (não desaparece nos meses futuros)
+  const patrimonioProjetado = isVigente
+    ? data.patrimonio
+    : historico?.patrimonio ?? {
+        total:
+          Math.round(
+            data.patrimonio.itens.reduce(
+              (s, it) => s + (it.valor + (it.adicao_mensal || 0) * Math.max(0, offset)),
+              0
+            ) * 100
+          ) / 100,
+        itens: data.patrimonio.itens.map((it) => ({
+          item: it.item,
+          valor: Math.round((it.valor + (it.adicao_mensal || 0) * Math.max(0, offset)) * 100) / 100,
+          adicao_mensal: it.adicao_mensal,
+        })),
+      };
 
   return {
     mes,
@@ -145,11 +312,16 @@ export function getMonthView(data: MasterData, mes: string): MonthView {
     despesasCategorias,
     despesasComPago,
     saldo_caixa: isVigente ? data.saldo_caixa : historico?.saldo_caixa,
-    patrimonio: isVigente ? data.patrimonio : historico?.patrimonio,
+    patrimonio: patrimonioProjetado,
     dividasAtivas,
     comprasParceladas,
-    totalDividasAtivas: dividasAtivas.reduce((s, d) => s + d.valor, 0),
-    totalComprasParceladas: comprasParceladas.reduce((s, c) => s + c.total / c.parcelas_totais, 0),
+    totalDividasAtivas,
+    totalComprasParceladas,
+    totalCartoesMes,
+    totalDespesasFixasPrevistas,
+    totalSaidasPrevistas,
+    entradasProjetadas,
+    resultadoPrevisto,
   };
 }
 

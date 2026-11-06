@@ -34,7 +34,13 @@ export function Dashboard({ initialData }: { initialData: MasterData }) {
     setIsRefreshing(true);
     setError(null);
     try {
-      const res = await fetch("/api/data", { cache: "no-store" });
+      const res = await fetch(`/api/data?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: {
+          Pragma: "no-cache",
+          "Cache-Control": "no-cache",
+        },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const fresh = (await res.json()) as MasterData;
       setData(fresh);
@@ -49,7 +55,8 @@ export function Dashboard({ initialData }: { initialData: MasterData }) {
   }, []);
 
   useEffect(() => {
-    setLastSync(new Date());
+    const id = setTimeout(() => setLastSync(new Date()), 0);
+    return () => clearTimeout(id);
   }, []);
 
   useEffect(() => {
@@ -99,7 +106,7 @@ export function Dashboard({ initialData }: { initialData: MasterData }) {
             { id: "forecast", label: "Previsibilidade", content: <ForecastSection data={data} /> },
             { id: "expenses", label: "Despesas", content: <ExpensesSection data={data} monthView={monthView} /> },
             { id: "debts", label: "Dividas e patrimonio", content: <DebtsSection data={data} monthView={monthView} /> },
-            { id: "payroll", label: "Entradas", content: <PayrollSection data={data} /> },
+            { id: "payroll", label: "Entradas", content: <PayrollSection data={data} mes={effectiveMonth} monthView={monthView} /> },
             { id: "cards", label: "Cartoes", content: <CardsSection data={data} mes={effectiveMonth} /> },
           ]}
         />

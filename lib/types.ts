@@ -14,6 +14,16 @@ export interface DespesaItem {
    * items keep validating.
    */
   detalhes?: { descricao: string; valor: number }[];
+  /**
+   * Added in schema v1.9 - "YYYY-MM" do primeiro mes em que esta despesa passa a vigorar.
+   * Omitido/null = vigora desde o mes_referencia.
+   */
+  data_inicio?: string | null;
+  /**
+   * Added in schema v1.9 - "YYYY-MM" do ultimo mes em que esta despesa vigora.
+   * Omitido/null = recorrente sem termino conhecido.
+   */
+  data_fim?: string | null;
 }
 
 export interface DespesaCategoria {
@@ -30,6 +40,9 @@ export interface CompraParcelada {
   parcela_atual?: number;
   /** Added in schema v1.1 - optional so older data files keep validating. */
   parcelas_totais?: number;
+  /** Added in schema v1.9 - mes de inicio do parcelamento ("YYYY-MM") para compras futuras */
+  mes_inicio?: string;
+  data_inicio?: string;
 }
 
 export interface DividaItem {
@@ -54,6 +67,10 @@ export interface RendaFixaMensal {
   liquido: number;
   beneficios: number;
   total: number;
+  /** Added in schema v1.8 - salario bruto fixo */
+  bruto?: number;
+  /** Added in schema v1.8 - descontos totais fixos em folha */
+  descontos?: number;
 }
 
 export interface PatrimonioItem {
@@ -153,6 +170,8 @@ export interface Pessoa {
   funcao: string | null;
   empresa: string | null;
   admissao: string | null;
+  /** Added in schema v1.8 - salario bruto fixo contratual */
+  salario_bruto_fixo?: number;
 }
 
 export interface MasterData {
@@ -180,6 +199,7 @@ export interface MasterData {
   dividas: {
     ativas: DividaItem[];
     atrasadas: DividaItem[];
+    quitadas?: (DividaItem & { data_quitacao?: string })[];
     total_ativas: number;
     total_atrasadas: number;
   };

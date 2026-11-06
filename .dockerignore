@@ -1,5 +1,10 @@
 node_modules
+bot/node_modules
+bot/state
+data/master.json
 .next
 .git
+.secrets
+.env*
 npm-debug.log
 README.md
